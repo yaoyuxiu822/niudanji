@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>万能扭蛋机</title>
+    <style>
+        :root {
+            --primary: #ff4757;
+            --primary-dark: #c0392b;
+            --secondary: #2d3436;
+            --accent: #fdcb6e;
+            --accent-glow: #ffeaa7;
+            --machine-red: #e74c3c;
+            --machine-shadow: #922b21;
+            --glass: rgba(255,255,255,0.35);
+            --neon: #00d9ff;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+            background: linear-gradient(160deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            color: #eee;
+            overflow-x: hidden;
+        }
+
+        /* 顶部标题 - 游戏感 */
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            text-shadow: 0 0 20px var(--accent), 0 0 40px var(--primary);
+            color: var(--accent);
+            letter-spacing: 4px;
+            margin: 0;
+        }
+        .header .sub {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.6);
+            margin-top: 4px;
+        }
+
+        /* 主布局：扭蛋机 + 操作区 + 历史侧边 */
+        .main-wrap {
+            display: flex;
+            gap: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        /* ========== 扭蛋机主体 - 更强游戏感 ========== */
+        .gasha-machine {
+            width: 340px;
+            min-height: 520px;
+            background: linear-gradient(180deg, var(--machine-red) 0%, var(--primary-dark) 100%);
+            border-radius: 44px 44px 24px 24px;
+            border: 10px solid #2c2c2c;
+            position: relative;
+            box-shadow:
+                0 14px 0 var(--machine-shadow),
+                0 18px 40px rgba(0,0,0,0.5),
+                inset 0 2px 0 rgba(255,255,255,0.2);
+            flex-shrink: 0;
+        }
+
+        /* 机器顶部装饰条 */
+        .gasha-machine::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            height: 20px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            border-radius: 10px 10px 0 0;
+            opacity: 0.8;
+        }
+
+        /* 玻璃罩 - 更通透 */
+        .glass-dome {
+            width: 270px;
+            height: 240px;
+            margin: 28px auto;
+            border-radius: 50% 50% 12% 12%;
+            border: 5px solid rgba(255,255,255,0.9);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-end;
+            padding: 12px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.2) 100%);
+            box-shadow: inset 0 -10px 30px rgba(0,0,0,0.2);
+        }
+
+        .ball-deco {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            margin: 3px;
+            box-shadow: inset -4px -4px 8px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* 旋转把手 */
+        .crank {
+            width: 88px;
+            height: 88px;
+            background: linear-gradient(145deg, #ecf0f1, #bdc3c7);
+            border: 6px solid #2c2c2c;
+            border-radius: 50%;
+            margin: 12px auto;
+            cursor: pointer;
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            box-shadow: 0 6px 0 #7f8c8d, inset 0 2px 0 rgba(255,255,255,0.8);
+        }
+        .crank::after {
+            content: '扭';
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: #2c2c2c;
+            color: var(--accent);
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .crank:hover { filter: brightness(1.1); }
+
+        /* 出球口 */
+        .exit {
+            width: 110px;
+            height: 50px;
+            background: linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%);
+            margin: 16px auto;
+            border-radius: 8px 8px 20px 20px;
+            box-shadow: inset 0 4px 8px rgba(0,0,0,0.5);
+        }
+
+        /* 操作与结果显示区 */
+        .display-area {
+            flex: 1;
+            min-width: 300px;
+            max-width: 420px;
+            background: rgba(255,255,255,0.08);
+            padding: 24px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.15);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+
+        .display-area h3 {
+            margin: 0 0 12px 0;
+            font-size: 1.1rem;
+            color: var(--accent);
+        }
+
+        .display-area p {
+            font-size: 0.9em;
+            color: rgba(255,255,255,0.7);
+            margin: 0 0 8px 0;
+        }
+
+        textarea {
+            width: 100%;
+            height: 140px;
+            margin: 8px 0 12px 0;
+            padding: 12px;
+            border-radius: 12px;
+            border: 2px solid rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.2);
+            color: #fff;
+            font-size: 14px;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+        textarea::placeholder { color: rgba(255,255,255,0.4); }
+
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: transform 0.1s, box-shadow 0.2s;
+        }
+        button:active { transform: scale(0.98); }
+        button.primary {
+            background: linear-gradient(180deg, var(--primary), var(--primary-dark));
+            color: #fff;
+            box-shadow: 0 4px 0 var(--machine-shadow);
+        }
+        button.primary:hover { box-shadow: 0 6px 16px rgba(231,76,60,0.5); }
+        button.reset {
+            background: rgba(255,255,255,0.15);
+            color: #eee;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        button.reset:hover { background: rgba(255,255,255,0.25); }
+
+        .status {
+            font-size: 13px;
+            color: rgba(255,255,255,0.7);
+            margin-top: 12px;
+        }
+
+        /* 结果卡片 - 扭蛋掉落效果 */
+        .result-card {
+            font-size: 26px;
+            font-weight: bold;
+            text-align: center;
+            padding: 28px 20px;
+            margin-top: 20px;
+            min-height: 80px;
+            border-radius: 16px;
+            background: linear-gradient(145deg, rgba(253,203,110,0.25), rgba(255,165,2,0.15));
+            border: 3px dashed var(--accent);
+            color: #fff;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        .result-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0.8;
+        }
+        .result-card.special {
+            background: linear-gradient(145deg, rgba(0,217,255,0.3), rgba(155,89,182,0.2));
+            border-color: var(--neon);
+            animation: specialGlow 1.5s ease-in-out infinite;
+        }
+        @keyframes specialGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(0,217,255,0.4); }
+            50% { box-shadow: 0 0 25px rgba(0,217,255,0.7); }
+        }
+
+        /* 动画 */
+        @keyframes shake {
+            0%, 100% { transform: translate(0,0); }
+            15% { transform: translate(4px, 2px) rotate(2deg); }
+            30% { transform: translate(-4px, -2px) rotate(-2deg); }
+            45% { transform: translate(2px, 4px) rotate(1deg); }
+            60% { transform: translate(-2px, -4px) rotate(-1deg); }
+            75% { transform: translate(3px, -2px) rotate(2deg); }
+        }
+        .shaking { animation: shake 0.08s linear infinite; }
+        .rotating { transform: rotate(360deg); }
+
+        /* ========== 历史记录侧边栏 ========== */
+        .history-panel {
+            width: 260px;
+            flex-shrink: 0;
+            background: rgba(255,255,255,0.06);
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.12);
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+        .history-header {
+            padding: 14px 16px;
+            background: rgba(0,0,0,0.2);
+            font-weight: bold;
+            color: var(--accent);
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .history-list {
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        .history-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        .history-list::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+        }
+        .history-item {
+            padding: 10px 12px;
+            margin-bottom: 6px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 10px;
+            font-size: 13px;
+            border-left: 4px solid var(--primary);
+        }
+        .history-item.special {
+            border-left-color: var(--neon);
+            background: rgba(0,217,255,0.08);
+        }
+        .history-item .label {
+            font-size: 11px;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 2px;
+        }
+        .history-empty {
+            padding: 24px 16px;
+            text-align: center;
+            color: rgba(255,255,255,0.4);
+            font-size: 13px;
+        }
+
+        /* 底部栏折叠（小屏可切换为底部） */
+        @media (max-width: 900px) {
+            .main-wrap { justify-content: center; }
+            .history-panel {
+                width: 100%;
+                max-width: 500px;
+                margin: 0 auto;
+            }
+            .history-list { max-height: 200px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🎰 万能扭蛋机</h1>
+        <p class="sub">转动把手，看看会掉出什么吧！</p>
+    </div>
+
+    <div class="main-wrap">
+        <div class="gasha-machine" id="machine">
+            <div class="glass-dome" id="dome"></div>
+            <div class="crank" id="crank" onclick="draw()"></div>
+            <div class="exit"></div>
+        </div>
+
+        <div class="display-area">
+            <h3>📝 设置题目内容</h3>
+            <p>每行一个知识点或学生名字：</p>
+            <textarea id="poolInput" placeholder="例如：&#10;地中海气候特征&#10;拿破仑&#10;光合作用公式&#10;李华">地中海气候特征
+拿破仑
+光合作用公式
+细胞核的功能
+《清明上河图》作者
+阿基米德原理</textarea>
+            <div class="btn-row">
+                <button class="primary" onclick="updatePool()">保存并同步到扭蛋机</button>
+                <button class="reset" onclick="resetGame()">🧹 一键重置</button>
+            </div>
+            <p class="status" id="statusInfo">当前剩余：0 个扭蛋</p>
+            <div class="result-card" id="resultText">准备好了吗？转动把手抽一个！</div>
+        </div>
+
+        <div class="history-panel">
+            <div class="history-header">📋 抽过的扭蛋</div>
+            <div class="history-list" id="historyList">
+                <div class="history-empty" id="historyEmpty">暂无记录</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let items = [];
+        let remainingItems = [];
+        let drawHistory = [];
+        const colors = ['#ff4757', '#ffa502', '#2ed573', '#1e90ff', '#e056fd', '#7bed9f'];
+
+        // 特殊扭蛋内容（约 1/15 概率触发）
+        const SPECIAL_ITEMS = [
+            '指定班里的一位同学回答',
+            '获得场外求助机会一次',
+            '恭喜 这题可以免答'
+        ];
+        const SPECIAL_PROB = 1 / 15;
+
+        function createDecoBalls() {
+            const dome = document.getElementById('dome');
+            dome.innerHTML = '';
+            for (let i = 0; i < 18; i++) {
+                const ball = document.createElement('div');
+                ball.className = 'ball-deco';
+                ball.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                dome.appendChild(ball);
+            }
+        }
+
+        function updatePool() {
+            const input = document.getElementById('poolInput').value;
+            items = input.split('\n').filter(line => line.trim() !== '');
+            remainingItems = [...items];
+            updateStatus();
+            document.getElementById('resultText').innerText = '已同步！转动把手抽一个吧！';
+            document.getElementById('resultText').classList.remove('special');
+        }
+
+        function updateStatus() {
+            document.getElementById('statusInfo').innerText = `当前剩余：${remainingItems.length} / 总数：${items.length}`;
+        }
+
+        function addToHistory(text, isSpecial) {
+            drawHistory.unshift({ text, isSpecial, time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) });
+            const listEl = document.getElementById('historyList');
+            const emptyEl = document.getElementById('historyEmpty');
+            if (emptyEl) emptyEl.remove();
+            const div = document.createElement('div');
+            div.className = 'history-item' + (isSpecial ? ' special' : '');
+            div.innerHTML = (isSpecial ? '<div class="label">✨ 特殊</div>' : '') + '<div>' + escapeHtml(text) + '</div><div class="label">' + drawHistory[0].time + '</div>';
+            listEl.insertBefore(div, listEl.firstChild);
+        }
+
+        function escapeHtml(s) {
+            const div = document.createElement('div');
+            div.textContent = s;
+            return div.innerHTML;
+        }
+
+        function draw() {
+            const crank = document.getElementById('crank');
+            const machine = document.getElementById('machine');
+            const resultText = document.getElementById('resultText');
+
+            // 决定是否出特殊扭蛋（约 1/15）
+            const isSpecial = Math.random() < SPECIAL_PROB;
+            const hasNormalItems = remainingItems.length > 0;
+
+            if (isSpecial || hasNormalItems) {
+                crank.classList.add('rotating');
+                machine.classList.add('shaking');
+                resultText.innerText = '正在掉落...';
+                resultText.classList.remove('special');
+
+                setTimeout(() => {
+                    crank.classList.remove('rotating');
+                    machine.classList.remove('shaking');
+
+                    let picked;
+                    if (isSpecial) {
+                        picked = SPECIAL_ITEMS[Math.floor(Math.random() * SPECIAL_ITEMS.length)];
+                        resultText.classList.add('special');
+                        addToHistory(picked, true);
+                    } else {
+                        const index = Math.floor(Math.random() * remainingItems.length);
+                        picked = remainingItems.splice(index, 1)[0];
+                        resultText.classList.remove('special');
+                        addToHistory(picked, false);
+                    }
+
+                    resultText.innerText = picked;
+                    updateStatus();
+                    createDecoBalls();
+                }, 800);
+            } else {
+                alert('扭蛋机空了！请点击「一键重置」或重新输入内容。');
+            }
+        }
+
+        function resetGame() {
+            if (confirm('确定要重置吗？这将重新装满扭蛋。（历史记录保留）')) {
+                remainingItems = [...items];
+                document.getElementById('resultText').innerText = '已重置，请开始！';
+                document.getElementById('resultText').classList.remove('special');
+                updateStatus();
+                createDecoBalls();
+            }
+        }
+
+        window.onload = () => {
+            createDecoBalls();
+            updatePool();
+        };
+    </script>
+</body>
+</html>
